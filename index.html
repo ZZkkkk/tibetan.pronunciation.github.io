@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="bo">
+<head>
+  <meta charset="UTF-8">
+  <title>藏文字母练习</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    :root {
+      --bg: #000;
+      --text: #fff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Noto Sans Tibetan","Tibetan Machine Uni","Microsoft Himalaya",sans-serif;
+      user-select: none;
+    }
+
+    /* 左上角分组面板 */
+    #group-panel {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.35);
+      padding: 10px 12px;
+      border-radius: 12px;
+      max-height: 80vh;
+      overflow-y: auto;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    #group-panel h2 {
+      margin: 0 0 6px 0;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #eee;
+    }
+    .group-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+      cursor: pointer;
+    }
+    .group-item input[type="checkbox"] {
+      accent-color: #fff;
+      width: 16px;
+      height: 16px;
+    }
+
+    /* 中间的展示区 */
+    #app { text-align: center; }
+    #char {
+      font-size: min(45vw, 45vh);
+      line-height: 1;
+      margin-bottom: 24px;
+      white-space: pre;
+    }
+    #pron {
+      font-size: 2.4rem;
+      min-height: 3rem;
+      opacity: 0;
+    }
+    #pron.show { opacity: 1; }
+
+    #status {
+      position: fixed;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.9rem;
+      color: #bbb;
+    }
+  </style>
+</head>
+<body>
+  <!-- 左上角的分组勾选 -->
+  <div id="group-panel">
+    <h2>分组</h2>
+    <div id="group-list">读取中…</div>
+  </div>
+
+  <!-- 中间字母 -->
+  <div id="app">
+    <div id="char">…</div>
+    <div id="pron"></div>
+  </div>
+  <div id="status">点击 / 空格 / 回车 → 显示发音</div>
+
+  <script>
+    const JSON_URL = 'letters.json';
+
+    const charEl = document.getElementById('char');
+    const pronEl = document.getElementById('pron');
+    const statusEl = document.getElementById('status');
+    const groupListEl = document.getElementById('group-list');
+
+    // 原始 JSON 数据
+    let rawData = {};
+    // 当前选中的组
+    let activeGroups = new Set();
+    // 当前可随机的池
+    let pool = [];
+    // 当前显示的 index
+    let currentIndex = -1;
+    // 是否在显示发音
+    let showingPron = false;
+
+    // 这里用一个“全局记忆”来记住每个字出现了几次、上次什么时候出现的
+    // key = groupName + "::" + char
+    const itemMeta = new Map();
+    // 每出现一次就 +1，用来判断“多久没出现”
+    let turnCounter = 0;
+    // 记录上一个显示的 id，方便给它权重拉低
+    let lastShownId = null;
+
+    async function loadJSON() {
+      try {
+        const res = await fetch(JSON_URL);
+        if (!res.ok) throw new Error('无法读取 JSON：' + res.status);
+        const data = await res.json();
+        rawData = data;
+
+        const groups = Object.keys(data);
+        buildGroupCheckboxes(groups);
+
+        // 默认全部选中
+        groups.forEach(g => activeGroups.add(g));
+        rebuildPool();
+
+        if (pool.length === 0) {
+          showNoGroupMsg();
+        } else {
+          nextLetter();
+        }
+      } catch (err) {
+        console.error(err);
+        groupListEl.textContent = '读取失败';
+        charEl.textContent = '⚠︎';
+        statusEl.textContent = err.message;
+      }
+    }
+
+    function buildGroupCheckboxes(groupNames) {
+      if (!groupNames.length) {
+        groupListEl.textContent = 'JSON 中没有分组';
+        return;
+      }
+      groupListEl.textContent = '';
+      groupNames.forEach(name => {
+        const label = document.createElement('label');
+        label.className = 'group-item';
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = name;
+        cb.checked = true;
+        cb.addEventListener('change', onGroupChange);
+
+        const span = document.createElement('span');
+        span.textContent = name;
+
+        label.appendChild(cb);
+        label.appendChild(span);
+        groupListEl.appendChild(label);
+      });
+    }
+
+    function onGroupChange(e) {
+      const groupName = e.target.value;
+      if (e.target.checked) {
+        activeGroups.add(groupName);
+      } else {
+        activeGroups.delete(groupName);
+      }
+      rebuildPool();
+      if (pool.length === 0) {
+        showNoGroupMsg();
+        return;
+      }
+      // 如果当前显示的字不在池里了，就换一个
+      const curr = pool[currentIndex];
+      if (!curr) {
+        nextLetter();
+      }
+    }
+
+    // 把当前勾选的组合成随机池，并把老的出现次数/上次出现时间写回去
+    function rebuildPool() {
+      const newPool = [];
+      activeGroups.forEach(g => {
+        const arr = rawData[g];
+        if (Array.isArray(arr)) {
+          arr.forEach(item => {
+            if (item && item.char) {
+              const id = makeItemId(g, item.char);
+              const meta = itemMeta.get(id) || { seen: 0, lastShown: -9999 };
+              newPool.push({
+                id,
+                char: item.char,
+                pron: item.pron || '',
+                group: g,
+                seen: meta.seen,
+                lastShown: meta.lastShown
+              });
+            }
+          });
+        }
+      });
+      pool = newPool;
+    }
+
+    function makeItemId(group, char) {
+      return group + '::' + char;
+    }
+
+    function showNoGroupMsg() {
+      charEl.textContent = 'no data';
+      pronEl.textContent = '';
+      pronEl.classList.remove('show');
+      statusEl.textContent = '请至少勾选一个分组';
+      showingPron = false;
+      currentIndex = -1;
+    }
+
+    function nextLetter() {
+      if (!pool.length) {
+        showNoGroupMsg();
+        return;
+      }
+      // 按权重选一个
+      const pickedIndex = pickWeightedIndex();
+      currentIndex = pickedIndex;
+      const item = pool[currentIndex];
+
+      charEl.textContent = item.char;
+      pronEl.textContent = item.pron;
+      hidePron();
+
+      // 更新全局记忆
+      turnCounter++;
+      const meta = itemMeta.get(item.id) || { seen: 0, lastShown: -9999 };
+      meta.seen += 1;
+      meta.lastShown = turnCounter;
+      itemMeta.set(item.id, meta);
+
+      // 同时把池子里的那一项也更新一下
+      pool[currentIndex].seen = meta.seen;
+      pool[currentIndex].lastShown = meta.lastShown;
+
+      // 标记一下谁是刚刚出现的，下一次就可以降权
+      lastShownId = item.id;
+    }
+
+    // 核心：带权随机
+    function pickWeightedIndex() {
+      // 计算所有项的权重
+      const weights = pool.map(it => getWeight(it));
+      const total = weights.reduce((a,b) => a + b, 0);
+      if (total <= 0) {
+        // 理论上不会到这里，兜底随机
+        return Math.floor(Math.random() * pool.length);
+      }
+      const r = Math.random() * total;
+      let acc = 0;
+      for (let i = 0; i < pool.length; i++) {
+        acc += weights[i];
+        if (r <= acc) {
+          return i;
+        }
+      }
+      return pool.length - 1;
+    }
+
+    // 权重规则：
+    // 1. 刚刚出现的：给一个很小的权重，比如 0.4 → 有小概率连续
+    // 2. 从没出现过的：优先级最高，给 5
+    // 3. 出现过但很久没出现：根据“离现在有多远”稍微往上加
+    function getWeight(item) {
+      // 刚刚那个
+      if (item.id === lastShownId) {
+        return 0.4; // 不是 0，这样有小概率连续
+      }
+
+      // 从未出现过
+      if (item.seen === 0) {
+        return 5;
+      }
+
+      // 出现过：看离现在有多远
+      // item.lastShown 是第几轮出现的，turnCounter 是当前轮
+      const age = Math.max(0, turnCounter - item.lastShown); // 越大说明越久没出现
+      // 基础权重
+      let w = 2;
+      // 隔得越久就越加一点，每隔一轮 +0.3，上不封顶也没事
+      w += age * 0.3;
+      return w;
+    }
+
+    function showPron() {
+      pronEl.classList.add('show');
+      showingPron = true;
+      statusEl.textContent = '再点 / 空格 / 回车 → 换下一个字';
+    }
+
+    function hidePron() {
+      pronEl.classList.remove('show');
+      showingPron = false;
+      statusEl.textContent = '点击 / 空格 / 回车 → 显示发音';
+    }
+
+    function toggleOrNext() {
+      if (!pool.length) {
+        showNoGroupMsg();
+        return;
+      }
+      if (!showingPron) {
+        showPron();
+      } else {
+        nextLetter();
+      }
+    }
+
+    // 页面点击：点左侧面板不触发
+    document.addEventListener('click', (ev) => {
+      const panel = document.getElementById('group-panel');
+      if (panel.contains(ev.target)) {
+        return;
+      }
+      window.getSelection()?.removeAllRanges?.();
+      toggleOrNext();
+    });
+
+    // 键盘
+    document.addEventListener('keydown', (ev) => {
+      if (ev.code === 'Space' || ev.code === 'Enter') {
+        ev.preventDefault();
+        toggleOrNext();
+      }
+    });
+
+    loadJSON();
+  </script>
+</body>
+</html>
