@@ -82,7 +82,7 @@
     { "char": "གྲ", "pron": "chav" },
     { "char": "དྲ", "pron": "chav" },
     { "char": "བྲ", "pron": "chav" },
-    { "char": "ཧྲ", "pron": "shav" },
+    { "char": "ཧྲ", "pron": "shaf" },
     { "char": "མྲ", "pron": "mav" },
     { "char": "སྲ", "pron": "saf" },
     { "char": "ཀླ", "pron": "laf" },
@@ -2783,3 +2783,4 @@
 
 
 }
+
