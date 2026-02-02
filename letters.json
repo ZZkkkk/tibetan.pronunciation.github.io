@@ -84,7 +84,7 @@
     { "char": "བྲ", "pron": "chav" },
     { "char": "ཧྲ", "pron": "shav" },
     { "char": "མྲ", "pron": "mav" },
-    { "char": "སྲ", "pron": "sav" },
+    { "char": "སྲ", "pron": "saf" },
     { "char": "ཀླ", "pron": "laf" },
     { "char": "གླ", "pron": "laf" },
     { "char": "བླ", "pron": "laf" },
@@ -2780,5 +2780,6 @@
         "wylie": "stsa"
       }
 ]
+
 
 }
