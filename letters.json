@@ -82,7 +82,7 @@
     { "char": "གྲ", "pron": "chav" },
     { "char": "དྲ", "pron": "chav" },
     { "char": "བྲ", "pron": "chav" },
-    { "char": "ཧྲ", "pron": "shaf" },
+    { "char": "ཧྲ", "pron": "shav" },
     { "char": "མྲ", "pron": "mav" },
     { "char": "སྲ", "pron": "saf" },
     { "char": "ཀླ", "pron": "laf" },
@@ -91,6 +91,44 @@
     { "char": "རླ", "pron": "laf" },
     { "char": "སླ", "pron": "laf" },
     { "char": "ཟླ", "pron": "ndav" }
+  ],
+   "前加字": [
+    { "char": "གཅའ", "pron": "jaf" },
+    { "char": "གཏའ", "pron": "daf" },
+    { "char": "གཙའ", "pron": "zaf" },
+    { "char": "གཤའ", "pron": "xaf" },
+    { "char": "གསའ", "pron": "saf" },
+    { "char": "གཞའ", "pron": "xaf" },
+    { "char": "གཟའ", "pron": "sav" },
+    { "char": "དཀའ", "pron": "gaf" },
+    { "char": "དཔའ", "pron": "baf" },
+    { "char": "བཀའ", "pron": "gaf" },
+    { "char": "བཅའ", "pron": "jaf" },
+    { "char": "བཏའ", "pron": "daf" },
+    { "char": "བཙའ", "pron": "zaf" },
+    { "char": "བཤའ", "pron": "xaf" },
+    { "char": "བསའ", "pron": "saf" },
+    { "char": "བཞའ", "pron": "xav" },
+    { "char": "བཟའ", "pron": "sav" },
+    { "char": "མཁའ", "pron": "kaf" },
+    { "char": "མཆའ", "pron": "qaf" },
+    { "char": "མཐའ", "pron": "taf" },
+    { "char": "མཚའ", "pron": "caf" },
+    { "char": "འཁའ", "pron": "kaf" },
+    { "char": "འཆའ", "pron": "qaf" },
+    { "char": "འཐའ", "pron": "taf" },
+    { "char": "འཕའ", "pron": "paf" },
+    { "char": "འཚའ", "pron": "caf" },
+    { "char": "བཀླ", "pron": "laf" },
+    { "char": "བཟླ", "pron": "ndav" },
+    { "char": "གཉའ", "pron": "nyaf" },
+    { "char": "གནའ", "pron": "naf" },
+    { "char": "གཡའ", "pron": "yaf" },
+    { "char": "དངའ", "pron": "ngaf" },
+    { "char": "དམའ", "pron": "maf" },
+    { "char": "མངའ", "pron": "ngaf" },
+    { "char": "མཉའ", "pron": "nyaf" },
+    { "char": "མནའ", "pron": "naf" }
   ],
   "元音符号": [
     { "char": "ཀི", "pron": "ki" },
@@ -2781,6 +2819,4 @@
       }
 ]
 
-
 }
-
